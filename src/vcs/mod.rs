@@ -16,12 +16,14 @@ pub mod file;
 pub mod git;
 mod hg;
 mod jj;
+pub mod stdin;
 pub(crate) mod traits;
 
 pub use file::FileBackend;
 pub use git::GitBackend;
 pub use hg::HgBackend;
 pub use jj::JjBackend;
+pub use stdin::StdinBackend;
 pub use traits::{CommitInfo, VcsBackend, VcsInfo};
 
 use crate::error::{Result, TuicrError};

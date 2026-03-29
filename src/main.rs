@@ -85,6 +85,42 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
+    // --stdin is mutually exclusive with --file, --path, -r, and -w
+    if cli_args.stdin_mode {
+        if cli_args.file_path.is_some() {
+            eprintln!("Error: --stdin cannot be combined with --file");
+            std::process::exit(2);
+        }
+        if cli_args.path_filter.is_some() {
+            eprintln!("Error: --stdin cannot be combined with --path");
+            std::process::exit(2);
+        }
+        if cli_args.revisions.is_some() {
+            eprintln!("Error: --stdin cannot be combined with -r/--revisions");
+            std::process::exit(2);
+        }
+        if cli_args.working_tree {
+            eprintln!("Error: --stdin cannot be combined with -w/--working-tree");
+            std::process::exit(2);
+        }
+    }
+
+    // --stdin: read all of stdin BEFORE entering raw mode (raw mode changes terminal input)
+    let stdin_content = if cli_args.stdin_mode {
+        use std::io::Read;
+        let mut buf = String::new();
+        io::stdin()
+            .read_to_string(&mut buf)
+            .expect("Failed to read from stdin");
+        if buf.is_empty() {
+            eprintln!("Error: stdin is empty");
+            std::process::exit(2);
+        }
+        Some(buf)
+    } else {
+        None
+    };
+
     // --path implies --working-tree unless -r is explicitly provided
     if cli_args.path_filter.is_some() && !cli_args.working_tree && cli_args.revisions.is_none() {
         cli_args.working_tree = true;
@@ -144,6 +180,8 @@ fn main() -> anyhow::Result<()> {
         cli_args.working_tree,
         cli_args.path_filter.as_deref(),
         cli_args.file_path.as_deref(),
+        stdin_content,
+        cli_args.stdin_name,
     ) {
         Ok(mut app) => {
             app.supports_keyboard_enhancement = keyboard_enhancement_supported;

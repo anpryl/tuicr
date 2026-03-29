@@ -1076,6 +1076,10 @@ pub struct CliArgs {
     pub path_filter: Option<String>,
     /// Open a single file for annotation (no VCS required)
     pub file_path: Option<String>,
+    /// Read content from stdin for annotation (no VCS/file required)
+    pub stdin_mode: bool,
+    /// Display name for stdin content (controls syntax highlighting)
+    pub stdin_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -1431,6 +1435,8 @@ Options:
   -w, --working-tree     Include uncommitted changes (skip commit selector when used alone,
                          combine with commits when used with -r)
   --file <PATH>          Open a file for annotation (no VCS required)
+  --stdin                Read content from stdin for annotation (no VCS/file required)
+  --stdin-name <NAME>    Display name for stdin content (e.g. plan.md for syntax highlighting)
   --stdout               Output to stdout instead of clipboard when exporting
   --no-update-check      Skip checking for updates on startup
   -V, --version          Print version
@@ -1576,6 +1582,29 @@ fn parse_cli_args_from(args: &[String]) -> Result<CliArgs, String> {
                 return Err("--file requires a file path".to_string());
             }
             cli_args.file_path = Some(value.to_string());
+        }
+
+        // Handle --stdin
+        if args[i] == "--stdin" {
+            cli_args.stdin_mode = true;
+        }
+
+        // Handle --stdin-name value
+        if args[i] == "--stdin-name" {
+            let value = args
+                .get(i + 1)
+                .ok_or_else(|| "--stdin-name requires a display name".to_string())?;
+            if value.starts_with('-') {
+                return Err("--stdin-name requires a display name".to_string());
+            }
+            cli_args.stdin_name = Some(value.clone());
+        }
+        // Handle --stdin-name=value
+        if let Some(value) = args[i].strip_prefix("--stdin-name=") {
+            if value.is_empty() {
+                return Err("--stdin-name requires a display name".to_string());
+            }
+            cli_args.stdin_name = Some(value.to_string());
         }
 
         // Handle -r / --revisions value
@@ -1988,5 +2017,45 @@ mod tests {
             .expect("parse should succeed");
         assert_eq!(parsed.path_filter, Some("src/".to_string()));
         assert_eq!(parsed.revisions, Some("HEAD~3..".to_string()));
+    }
+
+    #[test]
+    fn should_parse_stdin_flag() {
+        let parsed = parse_for_test(&["tuicr", "--stdin"]).expect("parse should succeed");
+        assert!(parsed.stdin_mode);
+        assert!(parsed.stdin_name.is_none());
+    }
+
+    #[test]
+    fn should_parse_stdin_with_name() {
+        let parsed =
+            parse_for_test(&["tuicr", "--stdin", "--stdin-name", "plan.md"])
+                .expect("parse should succeed");
+        assert!(parsed.stdin_mode);
+        assert_eq!(parsed.stdin_name, Some("plan.md".to_string()));
+    }
+
+    #[test]
+    fn should_parse_stdin_name_equals_syntax() {
+        let parsed =
+            parse_for_test(&["tuicr", "--stdin", "--stdin-name=config.nix"])
+                .expect("parse should succeed");
+        assert!(parsed.stdin_mode);
+        assert_eq!(parsed.stdin_name, Some("config.nix".to_string()));
+    }
+
+    #[test]
+    fn should_parse_stdin_with_stdout() {
+        let parsed =
+            parse_for_test(&["tuicr", "--stdin", "--stdout"]).expect("parse should succeed");
+        assert!(parsed.stdin_mode);
+        assert!(parsed.output_to_stdout);
+    }
+
+    #[test]
+    fn should_default_stdin_mode_to_false() {
+        let parsed = parse_for_test(&["tuicr"]).expect("parse should succeed");
+        assert!(!parsed.stdin_mode);
+        assert!(parsed.stdin_name.is_none());
     }
 }

@@ -12,6 +12,7 @@ pub enum VcsType {
     Mercurial,
     Jujutsu,
     File,
+    Stdin,
 }
 
 impl std::fmt::Display for VcsType {
@@ -21,6 +22,7 @@ impl std::fmt::Display for VcsType {
             VcsType::Mercurial => write!(f, "hg"),
             VcsType::Jujutsu => write!(f, "jj"),
             VcsType::File => write!(f, "file"),
+            VcsType::Stdin => write!(f, "stdin"),
         }
     }
 }

@@ -15,7 +15,7 @@ use crate::syntax::SyntaxHighlighter;
 use crate::theme::Theme;
 use crate::update::UpdateInfo;
 use crate::vcs::git::calculate_gap;
-use crate::vcs::{CommitInfo, FileBackend, VcsBackend, VcsInfo, detect_vcs};
+use crate::vcs::{CommitInfo, FileBackend, StdinBackend, VcsBackend, VcsInfo, detect_vcs};
 
 const VISIBLE_COMMIT_COUNT: usize = 10;
 const COMMIT_PAGE_SIZE: usize = 10;
@@ -385,7 +385,38 @@ impl App {
         working_tree: bool,
         path_filter: Option<&str>,
         file_path: Option<&str>,
+        stdin_content: Option<String>,
+        stdin_name: Option<String>,
     ) -> Result<Self> {
+        // --stdin mode: annotate content piped via stdin
+        if let Some(content) = stdin_content {
+            let vcs = Box::new(StdinBackend::new(content, stdin_name)?);
+            let vcs_info = vcs.info().clone();
+            let highlighter = theme.syntax_highlighter();
+            let diff_files = vcs.get_working_tree_diff(highlighter)?;
+            let session = Self::load_or_create_session(&vcs_info, SessionDiffSource::WorkingTree);
+
+            let mut app = Self::build(
+                vcs,
+                vcs_info,
+                theme,
+                comment_type_configs,
+                output_to_stdout,
+                diff_files,
+                session,
+                DiffSource::WorkingTree,
+                InputMode::Normal,
+                Vec::new(),
+                None,
+            )?;
+
+            // Hide file list since there's only one "file"
+            app.show_file_list = false;
+            app.focused_panel = FocusedPanel::Diff;
+
+            return Ok(app);
+        }
+
         // --file mode: open a single file for annotation without VCS
         if let Some(file_path) = file_path {
             let vcs = Box::new(FileBackend::new(file_path)?);
