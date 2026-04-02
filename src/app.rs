@@ -1551,6 +1551,19 @@ impl App {
         self.update_current_file_from_cursor();
     }
 
+    pub fn diff_scroll_to_top(&mut self) {
+        self.diff_state.cursor_line = 0;
+        self.diff_state.scroll_offset = 0;
+        self.update_current_file_from_cursor();
+    }
+
+    pub fn diff_scroll_to_bottom(&mut self) {
+        let max_line = self.total_lines().saturating_sub(1);
+        self.diff_state.cursor_line = max_line;
+        self.diff_state.scroll_offset = self.max_scroll_offset();
+        self.update_current_file_from_cursor();
+    }
+
     pub fn scroll_left(&mut self, cols: usize) {
         if self.diff_state.wrap_lines {
             return;
@@ -1843,6 +1856,16 @@ impl App {
     pub fn file_list_up(&mut self, n: usize) {
         let new_idx = self.file_list_state.selected().saturating_sub(n);
         self.file_list_state.select(new_idx);
+    }
+
+    pub fn file_list_to_top(&mut self) {
+        self.file_list_state.select(0);
+    }
+
+    pub fn file_list_to_bottom(&mut self) {
+        let visible_items = self.build_visible_items();
+        let max_idx = visible_items.len().saturating_sub(1);
+        self.file_list_state.select(max_idx);
     }
 
     pub fn jump_to_file(&mut self, idx: usize) {

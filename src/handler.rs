@@ -467,6 +467,8 @@ pub fn handle_file_list_action(app: &mut App, action: Action) {
     match action {
         Action::CursorDown(n) => app.file_list_down(n),
         Action::CursorUp(n) => app.file_list_up(n),
+        Action::GoToTop => app.file_list_to_top(),
+        Action::GoToBottom => app.file_list_to_bottom(),
         Action::ScrollLeft(n) => app.file_list_state.scroll_left(n),
         Action::ScrollRight(n) => app.file_list_state.scroll_right(n),
         Action::SelectFile | Action::ToggleExpand => {
@@ -496,6 +498,8 @@ pub fn handle_diff_action(app: &mut App, action: Action) {
     match action {
         Action::CursorDown(n) => app.cursor_down(n),
         Action::CursorUp(n) => app.cursor_up(n),
+        Action::GoToTop => app.diff_scroll_to_top(),
+        Action::GoToBottom => app.diff_scroll_to_bottom(),
         Action::ScrollLeft(n) => app.scroll_left(n),
         Action::ScrollRight(n) => app.scroll_right(n),
         Action::SelectFile => {
@@ -536,11 +540,6 @@ fn handle_shared_normal_action(app: &mut App, action: Action) {
         Action::HalfPageUp => app.scroll_up(app.diff_state.viewport_height / 2),
         Action::PageDown => app.scroll_down(app.diff_state.viewport_height),
         Action::PageUp => app.scroll_up(app.diff_state.viewport_height),
-        Action::GoToTop => app.jump_to_file(0),
-        Action::GoToBottom => {
-            let last = app.file_count().saturating_sub(1);
-            app.jump_to_file(last);
-        }
         Action::NextFile => app.next_file(),
         Action::PrevFile => app.prev_file(),
         Action::NextHunk => app.next_hunk(),
